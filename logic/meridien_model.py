@@ -1,17 +1,27 @@
 import pandas as pd
+from sklearn.linear_model import LinearRegression
 
 def run_meridien_model(df):
-    # Basic aggregation
-    grouped = df.groupby('media').agg({
-        'spend': 'sum',
-        'revenue': 'sum'
-    }).reset_index()
+    spend_cols = [col for col in df.columns if '_spend' in col]
+    X = df[spend_cols]
+    y = df['revenue']
 
-    grouped['roi'] = grouped['revenue'] / grouped['spend']
-    grouped['marginal_roi'] = grouped['roi'] - grouped['roi'].mean()
-    grouped['normalized_roi'] = (grouped['roi'] - grouped['roi'].min()) / (grouped['roi'].max() - grouped['roi'].min())
+    model = LinearRegression().fit(X, y)
+    coefficients = model.coef_
 
-    forecast_df = grouped[['media', 'revenue']].copy()
-    forecast_df['forecast'] = forecast_df['revenue'] * 1.1  # Dummy forecast: +10%
+    summary = []
+    for i, channel in enumerate(spend_cols):
+        spend = X[channel].sum()
+        contribution = coefficients[i] * X[channel].sum()
+        roi = contribution / spend if spend > 0 else 0
+        summary.append({
+            'Channel': channel.replace('_spend', ''),
+            'Spend': spend,
+            'Contribution': contribution,
+            'ROI': roi,
+            'Marginal ROI': coefficients[i],
+            'Normalized ROI': roi / max(roi, 1)
+        })
 
-    return grouped[['media', 'roi']], grouped[['media', 'marginal_roi']], grouped[['media', 'normalized_roi']], forecast_df
+    summary_df = pd.DataFrame(summary).sort_values(by='ROI', ascending=False)
+    return model, summary_df
