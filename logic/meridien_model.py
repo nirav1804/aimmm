@@ -1,13 +1,17 @@
 import pandas as pd
 
 def run_meridien_model(df):
-    grouped = df.groupby('media').agg({'spend': 'sum', 'revenue': 'sum'}).reset_index()
+    # Basic aggregation
+    grouped = df.groupby('media').agg({
+        'spend': 'sum',
+        'revenue': 'sum'
+    }).reset_index()
+
     grouped['roi'] = grouped['revenue'] / grouped['spend']
-    grouped['marginal_roi'] = grouped['roi'] * 0.8
-    grouped['normalized_roi'] = grouped['roi'] / grouped['roi'].sum()
+    grouped['marginal_roi'] = grouped['roi'] - grouped['roi'].mean()
+    grouped['normalized_roi'] = (grouped['roi'] - grouped['roi'].min()) / (grouped['roi'].max() - grouped['roi'].min())
 
-    roi_df = grouped[['media', 'spend', 'revenue', 'roi']]
-    marginal_roi_df = grouped[['media', 'marginal_roi']]
-    normalized_roi_df = grouped[['media', 'normalized_roi']]
+    forecast_df = grouped[['media', 'revenue']].copy()
+    forecast_df['forecast'] = forecast_df['revenue'] * 1.1  # Dummy forecast: +10%
 
-    return roi_df, marginal_roi_df, normalized_roi_df
+    return grouped[['media', 'roi']], grouped[['media', 'marginal_roi']], grouped[['media', 'normalized_roi']], forecast_df
