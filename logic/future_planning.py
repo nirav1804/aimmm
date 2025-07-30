@@ -1,7 +1,9 @@
 import pandas as pd
 
-def generate_plan(roi_df, total_budget=100000):
-    plan_df = roi_df[["media", "roi"]].copy()
-    total_roi = plan_df["roi"].sum()
-    plan_df["allocated_budget"] = (plan_df["roi"] / total_roi) * total_budget
-    return plan_df
+def scenario_planner(normalized_roi_df, budget):
+    normalized_roi_df = normalized_roi_df.copy()
+    total_weight = normalized_roi_df["normalized_roi"].sum()
+    normalized_roi_df["planned_spend"] = (normalized_roi_df["normalized_roi"] / total_weight) * budget
+    normalized_roi_df["forecasted_revenue"] = normalized_roi_df["planned_spend"] * normalized_roi_df["normalized_roi"] * 2  # Placeholder
+    forecast = normalized_roi_df["forecasted_revenue"].sum()
+    return normalized_roi_df, forecast
