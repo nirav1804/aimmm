@@ -1,29 +1,29 @@
 import pandas as pd
 
 def preprocess_data(df):
+    # Create a mapping based on common variations
     column_mapping = {
-        'channel': 'media',
-        'media channel': 'media',
-        'media': 'media',
-
-        'spend': 'spend',
-        'spends': 'spend',
-        'investment': 'spend',
-        'budget': 'spend',
-
-        'revenue': 'revenue',
-        'sales': 'revenue',
-        'revenue generated': 'revenue'
+        "channel": "media",
+        "media channel": "media",
+        "spend": "spend",
+        "spends": "spend",
+        "amount spent": "spend",
+        "cost": "spend",
+        "revenue": "revenue",
+        "sales": "revenue",
+        "returns": "revenue"
     }
 
-    # Normalize column names
-    df.columns = [col.strip().lower() for col in df.columns]
+    # Convert all column names to lowercase
+    df.columns = [col.lower().strip() for col in df.columns]
 
-    # Rename using mapping
-    df.rename(columns=lambda x: column_mapping.get(x.strip().lower(), x), inplace=True)
+    # Rename based on mapping
+    df = df.rename(columns={col: column_mapping.get(col, col) for col in df.columns})
 
-    required_cols = {'media', 'spend', 'revenue'}
-    if not required_cols.issubset(df.columns):
-        raise ValueError(f"Missing columns. Required columns are: {required_cols}")
+    required_columns = {"media", "spend", "revenue"}
+    if not required_columns.issubset(df.columns):
+        raise ValueError(f"Missing columns. Required columns are: {required_columns}")
 
+    # Optional: Drop NaNs
+    df = df.dropna(subset=["media", "spend", "revenue"])
     return df
