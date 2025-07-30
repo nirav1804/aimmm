@@ -1,13 +1,23 @@
-**`README.md`**
-```markdown
-# 📊 MMM ROI Planner
+# 📈 AI Marketing Mix Model – Streamlit App
 
-A Streamlit app to perform Marketing Mix Modeling using 2 years of media and revenue data. Built using Meridian logic with forecasting and natural language explanations.
+This app allows marketers to upload their historical media spend and revenue data, run a basic MMM analysis, and generate ROI-based spend plans using AI.
 
-## ✅ Features
-- Upload historical media spend and revenue data
-- Get ROI, marginal ROI, and normalized ROI per channel
-- Generate media plan based on revenue, budget, or ROI targets
-- Strategies: Balanced, Aggressive, Conservative
-- Visuals: Trend charts + forecasted revenue bar chart
-- Downloadable media plan CSV
+## 📂 How to Use
+
+1. Upload a CSV with columns:
+   - `Media Channel`
+   - `Weekly Spend`
+   - `Weekly Revenue`
+
+2. The app:
+   - Visualizes trends
+   - Computes ROI
+   - Suggests optimal future spend plan
+   - Forecasts revenue
+   - Offers CSV downloads
+
+## 🛠️ Install
+
+```bash
+pip install -r requirements.txt
+streamlit run app.py
