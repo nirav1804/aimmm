@@ -1,30 +1,19 @@
-# logic/meridien_model.py
-
 import pandas as pd
 
 def run_meridien_model(df):
-    # Ensure the necessary columns exist
-    required_columns = {'channel', 'spend', 'revenue'}
+    required_columns = {'media', 'spend', 'revenue'}
     if not required_columns.issubset(df.columns):
         raise ValueError(f"Missing columns. Required columns are: {required_columns}")
 
-    # Group by channel and calculate total spend and revenue
-    grouped = df.groupby('channel').agg({
-        'spend': 'sum',
-        'revenue': 'sum'
-    }).reset_index()
+    df['roi'] = df['revenue'] / df['spend']
+    roi_df = df.groupby('media')[['spend', 'revenue']].sum().reset_index()
+    roi_df['roi'] = roi_df['revenue'] / roi_df['spend']
 
-    # Calculate ROI: revenue / spend
-    grouped['roi'] = grouped['revenue'] / grouped['spend']
-    roi_df = grouped[['channel', 'spend', 'revenue', 'roi']]
+    marginal_roi_df = roi_df.copy()
+    marginal_roi_df['marginal_roi'] = marginal_roi_df['roi'] * 0.8
 
-    # Calculate marginal ROI assuming equal budget increments (dummy logic)
-    total_spend = grouped['spend'].sum()
-    grouped['marginal_roi'] = grouped['revenue'] / total_spend
-    marginal_roi_df = grouped[['channel', 'marginal_roi']]
-
-    # Normalize ROI scores to 0-1
-    grouped['normalized_roi'] = (grouped['roi'] - grouped['roi'].min()) / (grouped['roi'].max() - grouped['roi'].min())
-    normalized_roi_df = grouped[['channel', 'normalized_roi']]
+    total = roi_df['roi'].sum()
+    normalized_roi_df = roi_df.copy()
+    normalized_roi_df['normalized_roi'] = normalized_roi_df['roi'] / total
 
     return roi_df, marginal_roi_df, normalized_roi_df
