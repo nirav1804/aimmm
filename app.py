@@ -1,41 +1,50 @@
 import streamlit as st
 import pandas as pd
 from logic.meridien_model import run_meridien_model
-from logic.preprocess import preprocess_data
-from utils.chart_utils import plot_time_series, plot_forecast
+from logic.future_planning import recommend_strategy
+from logic.explain import generate_explanations
+import altair as alt
 
-st.set_page_config(page_title="📈 AI Marketing Planner", layout="wide")
-st.title("📈 AI Marketing Planner using Marketing Mix Modeling (Meridien)")
+st.set_page_config(page_title="MMM ROI Optimizer", layout="wide")
+st.title("📊 Marketing Mix Modeling using Meridien")
 
-uploaded_file = st.file_uploader("Upload your campaign performance CSV", type=["csv"])
+uploaded_file = st.file_uploader("Upload 2-Year Marketing & Revenue Data (CSV)", type="csv")
 
-if uploaded_file is not None:
-    try:
-        raw_df = pd.read_csv(uploaded_file)
-        df = preprocess_data(raw_df)  # Smart renaming happens here
+if uploaded_file:
+    df = pd.read_csv(uploaded_file)
+    st.success("File uploaded successfully!")
 
-        roi_df, marginal_roi_df, normalized_roi_df, forecast_df = run_meridien_model(df)
+    # Run MMM model
+    results, summary_df = run_meridien_model(df)
+    st.subheader("📈 Channel Performance Summary")
+    st.dataframe(summary_df)
 
-        st.subheader("📊 ROI by Channel")
-        st.dataframe(roi_df)
+    # Graphs per channel
+    st.subheader("📊 ROI vs Spend by Channel")
+    chart = alt.Chart(summary_df).mark_bar().encode(
+        x=alt.X('ROI:Q', title='ROI'),
+        y=alt.Y('Channel:N', title='Channel'),
+        color=alt.value('steelblue')
+    )
+    st.altair_chart(chart, use_container_width=True)
 
-        st.subheader("🔍 Marginal ROI")
-        st.dataframe(marginal_roi_df)
+    # Explanation
+    st.subheader("🧠 AI Explanation")
+    for i, row in summary_df.iterrows():
+        st.markdown(f"**{row['Channel']}**: {generate_explanations(row)}")
 
-        st.subheader("📏 Normalized ROI")
-        st.dataframe(normalized_roi_df)
+    # Future planning section
+    st.subheader("📅 Future Planning")
+    plan_type = st.selectbox("Choose Planning Goal", ["Revenue Target", "Ad Spend Budget", "ROI Target"])
 
-        st.subheader("📥 Download Plan")
-        csv = roi_df.to_csv(index=False).encode('utf-8')
-        st.download_button("Download ROI CSV", csv, "roi_plan.csv", "text/csv")
+    if plan_type == "Revenue Target":
+        target = st.number_input("Enter Revenue Target (INR)", min_value=0)
+    elif plan_type == "Ad Spend Budget":
+        target = st.number_input("Enter Budget (INR)", min_value=0)
+    else:
+        target = st.number_input("Enter Target ROI", min_value=0.0, format="%.2f")
 
-        st.subheader("📈 Time-Series Trends")
-        st.plotly_chart(plot_time_series(df), use_container_width=True)
-
-        st.subheader("📉 Forecasted Revenue based on current plan")
-        st.plotly_chart(plot_forecast(forecast_df), use_container_width=True)
-
-    except Exception as e:
-        st.error(f"Error processing the file: {str(e)}")
-else:
-    st.info("👆 Upload a CSV file to get started.")
+    if st.button("Generate Plan"):
+        plan_df = recommend_strategy(summary_df, plan_type, target)
+        st.write("🔁 Recommended Future Plan (±20% Max Change per Channel):")
+        st.dataframe(plan_df)
