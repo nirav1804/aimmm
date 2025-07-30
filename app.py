@@ -12,7 +12,7 @@ uploaded_file = st.file_uploader("Upload your campaign performance CSV", type=["
 if uploaded_file is not None:
     try:
         raw_df = pd.read_csv(uploaded_file)
-        df = preprocess_data(raw_df)
+        df = preprocess_data(raw_df)  # Smart renaming happens here
 
         roi_df, marginal_roi_df, normalized_roi_df, forecast_df = run_meridien_model(df)
 
