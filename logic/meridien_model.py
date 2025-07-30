@@ -1,39 +1,30 @@
+# logic/meridien_model.py
+
 import pandas as pd
-import numpy as np
-from sklearn.linear_model import Ridge
-from sklearn.preprocessing import StandardScaler
 
-def run_meridien_model(df, media_cols, target):
-    X = df[media_cols].copy()
-    y = df[target].values
+def run_meridien_model(df):
+    # Ensure the necessary columns exist
+    required_columns = {'channel', 'spend', 'revenue'}
+    if not required_columns.issubset(df.columns):
+        raise ValueError(f"Missing columns. Required columns are: {required_columns}")
 
-    # Normalize the data
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
+    # Group by channel and calculate total spend and revenue
+    grouped = df.groupby('channel').agg({
+        'spend': 'sum',
+        'revenue': 'sum'
+    }).reset_index()
 
-    model = Ridge(alpha=0.5)
-    model.fit(X_scaled, y)
+    # Calculate ROI: revenue / spend
+    grouped['roi'] = grouped['revenue'] / grouped['spend']
+    roi_df = grouped[['channel', 'spend', 'revenue', 'roi']]
 
-    coef = model.coef_
-    intercept = model.intercept_
-    predictions = model.predict(X_scaled)
+    # Calculate marginal ROI assuming equal budget increments (dummy logic)
+    total_spend = grouped['spend'].sum()
+    grouped['marginal_roi'] = grouped['revenue'] / total_spend
+    marginal_roi_df = grouped[['channel', 'marginal_roi']]
 
-    result_df = df[media_cols].copy()
-    result_df["Actual"] = y
-    result_df["Predicted"] = predictions
+    # Normalize ROI scores to 0-1
+    grouped['normalized_roi'] = (grouped['roi'] - grouped['roi'].min()) / (grouped['roi'].max() - grouped['roi'].min())
+    normalized_roi_df = grouped[['channel', 'normalized_roi']]
 
-    total_budget = X.sum(axis=0)
-    contribution = coef * X.sum(axis=0)
-    roi = contribution / total_budget
-    marginal_roi = coef
-
-    roi_df = pd.DataFrame({
-        "Channel": media_cols,
-        "Coefficient": coef,
-        "Total Spend": total_budget,
-        "Contribution": contribution,
-        "ROI": roi,
-        "Marginal ROI": marginal_roi
-    })
-
-    return result_df, roi_df
+    return roi_df, marginal_roi_df, normalized_roi_df
