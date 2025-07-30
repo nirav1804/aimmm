@@ -1,3 +1,9 @@
-def explain_plan(plan_df):
-    top_channel = plan_df.sort_values("expected_revenue", ascending=False).iloc[0]
-    return f"The top performing channel in the forecasted plan is **{top_channel['media']}** with an expected revenue of ₹{top_channel['expected_revenue']:,.0f}."
+def generate_explanations(row):
+    if row['ROI'] > 1.5:
+        return "This channel is delivering high returns on investment. Consider scaling this up."
+    elif 1.0 < row['ROI'] <= 1.5:
+        return "This channel is performing well. Maintain or test higher budgets."
+    elif 0.5 < row['ROI'] <= 1.0:
+        return "This channel has moderate ROI. Consider optimizing campaigns."
+    else:
+        return "Low performance channel. Reduce budget or reevaluate strategy."
