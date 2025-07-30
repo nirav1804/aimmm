@@ -1,9 +1,9 @@
-**`requirements.txt`**
-```
-streamlit
 pandas
-matplotlib
+numpy
 scikit-learn
-```
-
----
+matplotlib
+seaborn
+plotly          # ← This is the correct package name (includes plotly express)
+streamlit
+statsmodels
+rich
