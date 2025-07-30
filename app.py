@@ -1,71 +1,44 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-import os
+from logic.preprocess import preprocess_data
+from logic.mmm_model import run_mmm
+from logic.forecasting import scenario_forecast
+from logic.optimizer import optimize_budget
+from logic.recommender import generate_insights
+from utils.charts import plot_channel_rois, plot_channel_curves
 
-# Set page config
-st.set_page_config(page_title="📈 Simple MMM App", layout="wide")
+st.set_page_config(layout="wide")
+st.title("📊 AI-Powered Marketing Mix Modeling Platform")
 
-st.title("📊 Marketing Mix Modeling (MMM) – Long Format Auto Converter")
+uploaded_file = st.file_uploader("Upload media + revenue data", type=["csv"])
 
-# Upload file
-uploaded_file = st.file_uploader("📤 Upload your media spend CSV file", type=["csv"])
+if uploaded_file:
+    df = pd.read_csv(uploaded_file)
+    data, media_channels = preprocess_data(df)
 
-if uploaded_file is not None:
-    try:
-        # Read CSV
-        df = pd.read_csv(uploaded_file)
-        df.columns = df.columns.str.strip()  # Clean column names
+    st.subheader("Step 1: ROI Analysis")
+    roi_df, marginal_roi_df, normalized_roi_df = run_mmm(data, media_channels)
+    st.dataframe(roi_df)
 
-        # Required columns
-        spend_cols = [col for col in df.columns if col.endswith("_spend")]
-        required_cols = ['date_start', 'revenue'] + spend_cols
+    plot_channel_rois(roi_df)
 
-        # Check for required columns
-        if not set(required_cols).issubset(df.columns):
-            missing = set(required_cols) - set(df.columns)
-            st.error(f"❌ Missing columns in your file: {missing}")
-            st.stop()
+    st.subheader("Step 2: Objective Setting")
+    obj = st.radio("Select your target", ["Revenue Target", "Spend Target", "ROI Target"])
+    val = st.number_input("Enter Target Value (in INR)", min_value=0.0)
 
-        # Melt to long format
-        df_melted = df.melt(
-            id_vars=['date_start', 'revenue'],
-            value_vars=spend_cols,
-            var_name='media',
-            value_name='spend'
-        )
+    strategy = st.selectbox("Select Strategy", ["Balanced", "Conservative", "Aggressive"])
+    scenario_df = scenario_forecast(data, roi_df, obj, val, strategy)
 
-        df_melted = df_melted.dropna(subset=['spend', 'revenue'])
+    st.subheader("Recommended Media Plan")
+    st.dataframe(scenario_df)
 
-        # Optional cleaning
-        df_melted['media'] = df_melted['media'].str.replace('_spend', '', regex=False)
+    st.subheader("Optimization Result (±20% variation)")
+    optimized_df = optimize_budget(data, media_channels, roi_df, obj, val, strategy)
+    st.dataframe(optimized_df)
 
-        st.subheader("🧹 Preview: Melted Data (Long Format)")
-        st.dataframe(df_melted.head(10))
+    st.subheader("AI Insights")
+    insights = generate_insights(roi_df, marginal_roi_df, normalized_roi_df)
+    st.markdown(insights)
 
-        # MMM modeling - very simple linear regression
-        st.subheader("📉 Simple ROI Analysis")
-
-        roi_df = df_melted.groupby('media').agg(
-            total_spend=('spend', 'sum'),
-            total_revenue=('revenue', 'sum')
-        ).reset_index()
-
-        roi_df['ROI'] = roi_df['total_revenue'] / roi_df['total_spend']
-        roi_df = roi_df.sort_values(by='ROI', ascending=False)
-
-        st.dataframe(roi_df)
-
-        # 📊 ROI Chart
-        st.subheader("📊 ROI by Channel")
-        fig, ax = plt.subplots(figsize=(10, 5))
-        sns.barplot(data=roi_df, x='ROI', y='media', ax=ax, palette='viridis')
-        ax.set_title("Channel-wise ROI")
-        st.pyplot(fig)
-
-    except Exception as e:
-        st.error(f"❌ Error processing the file: {str(e)}")
-else:
-    st.info("👆 Please upload a `.csv` file with date_start, revenue, and *_spend columns.")
-
+    st.subheader("Channel Performance Curves")
+    plot_channel_curves(data, roi_df, media_channels)
