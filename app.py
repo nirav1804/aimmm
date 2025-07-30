@@ -1,50 +1,71 @@
 import streamlit as st
 import pandas as pd
-from logic.meridien_model import run_meridien_model
-from logic.future_planning import recommend_strategy
-from logic.explain import generate_explanations
-import altair as alt
+import matplotlib.pyplot as plt
+import seaborn as sns
+import os
 
-st.set_page_config(page_title="MMM ROI Optimizer", layout="wide")
-st.title("📊 Marketing Mix Modeling using Meridien")
+# Set page config
+st.set_page_config(page_title="📈 Simple MMM App", layout="wide")
 
-uploaded_file = st.file_uploader("Upload 2-Year Marketing & Revenue Data (CSV)", type="csv")
+st.title("📊 Marketing Mix Modeling (MMM) – Long Format Auto Converter")
 
-if uploaded_file:
-    df = pd.read_csv(uploaded_file)
-    st.success("File uploaded successfully!")
+# Upload file
+uploaded_file = st.file_uploader("📤 Upload your media spend CSV file", type=["csv"])
 
-    # Run MMM model
-    results, summary_df = run_meridien_model(df)
-    st.subheader("📈 Channel Performance Summary")
-    st.dataframe(summary_df)
+if uploaded_file is not None:
+    try:
+        # Read CSV
+        df = pd.read_csv(uploaded_file)
+        df.columns = df.columns.str.strip()  # Clean column names
 
-    # Graphs per channel
-    st.subheader("📊 ROI vs Spend by Channel")
-    chart = alt.Chart(summary_df).mark_bar().encode(
-        x=alt.X('ROI:Q', title='ROI'),
-        y=alt.Y('Channel:N', title='Channel'),
-        color=alt.value('steelblue')
-    )
-    st.altair_chart(chart, use_container_width=True)
+        # Required columns
+        spend_cols = [col for col in df.columns if col.endswith("_spend")]
+        required_cols = ['date_start', 'revenue'] + spend_cols
 
-    # Explanation
-    st.subheader("🧠 AI Explanation")
-    for i, row in summary_df.iterrows():
-        st.markdown(f"**{row['Channel']}**: {generate_explanations(row)}")
+        # Check for required columns
+        if not set(required_cols).issubset(df.columns):
+            missing = set(required_cols) - set(df.columns)
+            st.error(f"❌ Missing columns in your file: {missing}")
+            st.stop()
 
-    # Future planning section
-    st.subheader("📅 Future Planning")
-    plan_type = st.selectbox("Choose Planning Goal", ["Revenue Target", "Ad Spend Budget", "ROI Target"])
+        # Melt to long format
+        df_melted = df.melt(
+            id_vars=['date_start', 'revenue'],
+            value_vars=spend_cols,
+            var_name='media',
+            value_name='spend'
+        )
 
-    if plan_type == "Revenue Target":
-        target = st.number_input("Enter Revenue Target (INR)", min_value=0)
-    elif plan_type == "Ad Spend Budget":
-        target = st.number_input("Enter Budget (INR)", min_value=0)
-    else:
-        target = st.number_input("Enter Target ROI", min_value=0.0, format="%.2f")
+        df_melted = df_melted.dropna(subset=['spend', 'revenue'])
 
-    if st.button("Generate Plan"):
-        plan_df = recommend_strategy(summary_df, plan_type, target)
-        st.write("🔁 Recommended Future Plan (±20% Max Change per Channel):")
-        st.dataframe(plan_df)
+        # Optional cleaning
+        df_melted['media'] = df_melted['media'].str.replace('_spend', '', regex=False)
+
+        st.subheader("🧹 Preview: Melted Data (Long Format)")
+        st.dataframe(df_melted.head(10))
+
+        # MMM modeling - very simple linear regression
+        st.subheader("📉 Simple ROI Analysis")
+
+        roi_df = df_melted.groupby('media').agg(
+            total_spend=('spend', 'sum'),
+            total_revenue=('revenue', 'sum')
+        ).reset_index()
+
+        roi_df['ROI'] = roi_df['total_revenue'] / roi_df['total_spend']
+        roi_df = roi_df.sort_values(by='ROI', ascending=False)
+
+        st.dataframe(roi_df)
+
+        # 📊 ROI Chart
+        st.subheader("📊 ROI by Channel")
+        fig, ax = plt.subplots(figsize=(10, 5))
+        sns.barplot(data=roi_df, x='ROI', y='media', ax=ax, palette='viridis')
+        ax.set_title("Channel-wise ROI")
+        st.pyplot(fig)
+
+    except Exception as e:
+        st.error(f"❌ Error processing the file: {str(e)}")
+else:
+    st.info("👆 Please upload a `.csv` file with date_start, revenue, and *_spend columns.")
+
