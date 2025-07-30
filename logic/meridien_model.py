@@ -1,19 +1,19 @@
 import pandas as pd
 
 def run_meridien_model(df):
-    required_columns = {"media", "spend", "revenue"}
-    if not required_columns.issubset(df.columns):
-        raise ValueError(f"Missing columns. Required columns are: {required_columns}")
+    grouped = df.groupby('media').agg(
+        spend=('spend', 'sum'),
+        revenue=('revenue', 'sum')
+    ).reset_index()
 
-    roi_df = df.groupby("media").agg({
-        "spend": "sum",
-        "revenue": "sum"
-    }).reset_index()
+    grouped['roi'] = grouped['revenue'] / grouped['spend']
+    grouped['marginal_roi'] = grouped['roi'] - grouped['roi'].mean()
+    grouped['normalized_roi'] = grouped['roi'] / grouped['roi'].sum()
+    grouped['forecasted_revenue'] = grouped['spend'] * grouped['roi'] * 1.1  # Example 10% uplift
 
-    roi_df["roi"] = roi_df["revenue"] / roi_df["spend"]
-    roi_df["marginal_roi"] = roi_df["roi"] * 0.8  # Placeholder logic
-    roi_df["normalized_roi"] = roi_df["roi"] / roi_df["roi"].max()
-
-    return roi_df[["media", "spend", "revenue", "roi"]], \
-           roi_df[["media", "marginal_roi"]], \
-           roi_df[["media", "normalized_roi"]]
+    return (
+        grouped[['media', 'spend', 'revenue', 'roi']],
+        grouped[['media', 'marginal_roi']],
+        grouped[['media', 'normalized_roi']],
+        grouped[['media', 'forecasted_revenue']]
+    )
