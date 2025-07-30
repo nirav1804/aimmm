@@ -1,11 +1,13 @@
-This is a Streamlit-based tool for ROI-driven marketing mix modeling using linear regression. It reads 2 years of weekly spend and revenue data and outputs insights including:
+**`README.md`**
+```markdown
+# 📊 MMM ROI Planner
 
-- Channel-wise ROI, Marginal ROI, and Normalized ROI
-- Simple explanations per channel
-- Future planning tools with budget/revenue/ROI target
+A Streamlit app to perform Marketing Mix Modeling using 2 years of media and revenue data. Built using Meridian logic with forecasting and natural language explanations.
 
-## 🧠 Features
-- Linear Regression-based MMM using `scikit-learn`
-- Smart planning suggestions
-- Visualizations with Altair
-- Streamlit frontend
+## ✅ Features
+- Upload historical media spend and revenue data
+- Get ROI, marginal ROI, and normalized ROI per channel
+- Generate media plan based on revenue, budget, or ROI targets
+- Strategies: Balanced, Aggressive, Conservative
+- Visuals: Trend charts + forecasted revenue bar chart
+- Downloadable media plan CSV
