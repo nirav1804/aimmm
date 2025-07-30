@@ -1,4 +1,9 @@
+**`requirements.txt`**
+```
 streamlit
 pandas
+matplotlib
 scikit-learn
-altair
+```
+
+---
