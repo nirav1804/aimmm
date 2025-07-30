@@ -1,9 +1,7 @@
 import pandas as pd
-import numpy as np
 
-def generate_plan(roi_df, new_budget):
-    total_roi = roi_df["ROI"].sum()
-    roi_df["Budget Share"] = roi_df["ROI"] / total_roi
-    roi_df["Planned Budget"] = roi_df["Budget Share"] * new_budget
-    roi_df["Expected Contribution"] = roi_df["Planned Budget"] * roi_df["Marginal ROI"]
-    return roi_df[["Channel", "Planned Budget", "Expected Contribution"]]
+def generate_plan(roi_df, total_budget=100000):
+    plan_df = roi_df[["media", "roi"]].copy()
+    total_roi = plan_df["roi"].sum()
+    plan_df["allocated_budget"] = (plan_df["roi"] / total_roi) * total_budget
+    return plan_df
