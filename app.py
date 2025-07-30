@@ -1,66 +1,51 @@
-# app.py
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 from logic.meridien_model import run_meridien_model
-from logic.future_planning import generate_plan
-from logic.explain import explain_results
-import matplotlib.pyplot as plt
-import io
+from logic.visualizations import plot_roi_barchart, plot_trend_chart, plot_forecast
+from logic.plan_optimizer import optimize_plan
 
-st.set_page_config(page_title="📈 Meridien MMM Tool", layout="wide")
-st.title("📊 Marketing Mix Modeling (MMM) – Meridien")
+st.set_page_config(page_title="AI Marketing Mix Model", layout="wide")
+st.title("📈 AI Marketing Mix Modeling & Budget Planner")
 
-uploaded_file = st.file_uploader("Upload your data CSV", type=["csv"])
+uploaded_file = st.file_uploader("Upload your campaign data CSV", type=["csv"])
 
-if uploaded_file:
+if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
-    st.success("Data uploaded successfully!")
 
-    if st.button("Run MMM Model"):
+    # ✅ Normalize column names
+    df.columns = df.columns.str.strip().str.lower()
+
+    st.subheader("Raw Data Preview")
+    st.dataframe(df.head())
+
+    try:
         roi_df, marginal_roi_df, normalized_roi_df = run_meridien_model(df)
+    except ValueError as e:
+        st.error(f"Error: {e}")
+        st.stop()
 
-        st.subheader("Channel-wise ROI")
-        st.dataframe(roi_df)
+    st.subheader("📊 ROI Summary")
+    st.dataframe(roi_df)
 
-        st.subheader("Marginal ROI")
-        st.dataframe(marginal_roi_df)
+    st.subheader("📉 Marginal ROI")
+    st.dataframe(marginal_roi_df)
 
-        st.subheader("Normalized ROI")
-        st.dataframe(normalized_roi_df)
+    st.subheader("⚖️ Normalized ROI")
+    st.dataframe(normalized_roi_df)
 
-        st.subheader("🔍 Easy Explanation")
-        st.markdown(explain_results(roi_df))
+    st.subheader("📈 Trend Charts")
+    st.plotly_chart(plot_trend_chart(df), use_container_width=True)
 
-        # Trend Charts
-        st.subheader("📉 Time Series Trends")
-        for channel in df.columns:
-            if channel.lower() not in ["date", "revenue"]:
-                fig, ax = plt.subplots()
-                ax.plot(df[channel], label=channel)
-                ax.set_title(f"Spend Trend – {channel}")
-                st.pyplot(fig)
+    st.subheader("🧠 Budget Planner")
+    total_budget = st.number_input("Enter Total Budget for Next Campaign", value=100000)
+    optimized_plan, forecast = optimize_plan(normalized_roi_df, total_budget)
 
-    st.markdown("---")
-    st.subheader("📈 Future Planning")
-    target_type = st.selectbox("Choose a target type", ["Revenue", "Ad Spend", "ROI"])
-    user_input = st.number_input(f"Enter your {target_type} target (in INR):", min_value=0)
+    st.subheader("Recommended Spend Plan")
+    st.dataframe(optimized_plan)
 
-    plan_type = st.selectbox("Choose planning mode", ["Balanced", "Aggressive", "Conservative"])
+    csv = optimized_plan.to_csv(index=False).encode('utf-8')
+    st.download_button("Download Spend Plan CSV", csv, "optimized_plan.csv", "text/csv")
 
-    if st.button("Generate Future Plan"):
-        plan_df, forecast_df, total_forecast = generate_plan(df, user_input, target_type, plan_type)
-
-        st.subheader("📋 Recommended Media Plan")
-        st.dataframe(plan_df)
-
-        # Download button
-        csv = plan_df.to_csv(index=False).encode('utf-8')
-        st.download_button("Download Plan CSV", csv, "media_plan.csv", "text/csv")
-
-        # Forecasted Revenue Bar Chart
-        st.subheader("📊 Forecasted Revenue by Channel")
-        fig, ax = plt.subplots()
-        forecast_df.plot(kind="bar", x="Channel", y="Forecasted Revenue", ax=ax, legend=False)
-        st.pyplot(fig)
-
-        st.markdown(f"### 💰 Total Forecasted Revenue: ₹ {total_forecast:,.0f}")
+    st.subheader("📊 Forecasted Revenue from Plan")
+    st.plotly_chart(plot_forecast(forecast), use_container_width=True)
