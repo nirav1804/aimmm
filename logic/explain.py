@@ -1,16 +1,20 @@
-**`logic/explain.py`**
-```python
-def generate_explanations(roi_df):
-    explanations = {}
-    for _, row in roi_df.iterrows():
-        if row['ROI'] > 100:
-            msg = "This channel is delivering excellent returns. Consider increasing its spend."
-        elif row['ROI'] > 50:
-            msg = "Moderate returns. Maintain or slightly increase investment."
-        else:
-            msg = "Low ROI. Review efficiency or reduce allocation."
-        explanations[row['Channel']] = msg
-    return explanations
-```
+def explain_results(plan_df):
+    explanations = []
+    for _, row in plan_df.iterrows():
+        channel = row["Channel"]
+        budget = row["Planned Budget"]
+        contribution = row["Expected Contribution"]
 
----
+        if contribution > budget:
+            comment = f"{channel} has a strong ROI. Recommended increased spend."
+        else:
+            comment = f"{channel} has lower returns. Consider optimizing or reallocating spend."
+
+        explanations.append({
+            "Channel": channel,
+            "Budget": round(budget, 2),
+            "Contribution": round(contribution, 2),
+            "Comment": comment
+        })
+
+    return explanations
