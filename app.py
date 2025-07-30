@@ -1,51 +1,41 @@
-
 import streamlit as st
 import pandas as pd
 from logic.meridien_model import run_meridien_model
-from logic.future_planning import generate_future_plan
-from logic.explain import explain_plan
+from logic.preprocess import preprocess_data
 from utils.chart_utils import plot_time_series, plot_forecast
 
-st.set_page_config(page_title="📊 AIMMM – AI Marketing Mix Model", layout="wide")
-st.title("📊 AIMMM – AI-Powered Marketing Mix Model")
+st.set_page_config(page_title="📈 AI Marketing Planner", layout="wide")
+st.title("📈 AI Marketing Planner using Marketing Mix Modeling (Meridien)")
 
-uploaded_file = st.file_uploader("Upload your marketing CSV file", type=["csv"])
+uploaded_file = st.file_uploader("Upload your campaign performance CSV", type=["csv"])
 
-if uploaded_file:
+if uploaded_file is not None:
     try:
-        df = pd.read_csv(uploaded_file)
+        raw_df = pd.read_csv(uploaded_file)
+        df = preprocess_data(raw_df)
 
-        # Rename relevant columns to match internal model logic
-        df.rename(columns={
-            'Channel': 'media',
-            'Actuals': 'spend',
-            'NetRevenue': 'revenue',
-        }, inplace=True)
+        roi_df, marginal_roi_df, normalized_roi_df, forecast_df = run_meridien_model(df)
 
-        required_columns = {'media', 'spend', 'revenue'}
-        if not required_columns.issubset(df.columns):
-            st.error(f"Missing required columns. Found: {df.columns.tolist()}")
-        else:
-            st.success("File successfully processed!")
+        st.subheader("📊 ROI by Channel")
+        st.dataframe(roi_df)
 
-            st.subheader("📈 Time Series Trend")
-            st.plotly_chart(plot_time_series(df), use_container_width=True)
+        st.subheader("🔍 Marginal ROI")
+        st.dataframe(marginal_roi_df)
 
-            st.subheader("📊 MMM Output")
-            roi_df, marginal_roi_df, normalized_roi_df = run_meridien_model(df)
-            st.dataframe(roi_df)
+        st.subheader("📏 Normalized ROI")
+        st.dataframe(normalized_roi_df)
 
-            st.subheader("📑 Future Scenario Planner")
-            plan_df = generate_future_plan(normalized_roi_df)
-            st.dataframe(plan_df)
+        st.subheader("📥 Download Plan")
+        csv = roi_df.to_csv(index=False).encode('utf-8')
+        st.download_button("Download ROI CSV", csv, "roi_plan.csv", "text/csv")
 
-            st.subheader("📉 Forecasted Revenue Based on Plan")
-            st.plotly_chart(plot_forecast(plan_df), use_container_width=True)
+        st.subheader("📈 Time-Series Trends")
+        st.plotly_chart(plot_time_series(df), use_container_width=True)
 
-            st.download_button("📥 Download Plan CSV", data=plan_df.to_csv(index=False), file_name="media_plan.csv")
-
-            st.subheader("🧠 Plan Explanation")
-            st.markdown(explain_plan(plan_df))
+        st.subheader("📉 Forecasted Revenue based on current plan")
+        st.plotly_chart(plot_forecast(forecast_df), use_container_width=True)
 
     except Exception as e:
-        st.error(f"Error processing the file: {e}")
+        st.error(f"Error processing the file: {str(e)}")
+else:
+    st.info("👆 Upload a CSV file to get started.")
