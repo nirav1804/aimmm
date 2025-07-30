@@ -1,9 +1,16 @@
-def generate_explanations(row):
-    if row['ROI'] > 1.5:
-        return "This channel is delivering high returns on investment. Consider scaling this up."
-    elif 1.0 < row['ROI'] <= 1.5:
-        return "This channel is performing well. Maintain or test higher budgets."
-    elif 0.5 < row['ROI'] <= 1.0:
-        return "This channel has moderate ROI. Consider optimizing campaigns."
-    else:
-        return "Low performance channel. Reduce budget or reevaluate strategy."
+**`logic/explain.py`**
+```python
+def generate_explanations(roi_df):
+    explanations = {}
+    for _, row in roi_df.iterrows():
+        if row['ROI'] > 100:
+            msg = "This channel is delivering excellent returns. Consider increasing its spend."
+        elif row['ROI'] > 50:
+            msg = "Moderate returns. Maintain or slightly increase investment."
+        else:
+            msg = "Low ROI. Review efficiency or reduce allocation."
+        explanations[row['Channel']] = msg
+    return explanations
+```
+
+---
